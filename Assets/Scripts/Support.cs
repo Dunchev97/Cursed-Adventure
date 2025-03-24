@@ -13,6 +13,7 @@ public class Support : BaseCharacter
     public float buffDuration = 10f;
     public float buffCooldown = 15f;
     private float nextBuffTime = 0f;
+    public float safeDistance = 4f; // Безопасная дистанция от врагов
     
     // Инициализация
     protected override void Start()
@@ -71,10 +72,19 @@ protected override void Update()
         {
             float distanceToTarget = Vector3.Distance(transform.position, target.position);
             
-            // Если цель в пределах дальности атаки
-            if (distanceToTarget <= attackRange)
+            // Если враг слишком близко, отходим и не атакуем
+            if (distanceToTarget < safeDistance)
+            {
+                Vector3 directionAway = (transform.position - target.position).normalized;
+                transform.position += directionAway * moveSpeed * Time.deltaTime;
+                transform.forward = -directionAway; // Продолжаем смотреть на врага
+            }
+            // Если цель в оптимальной дистанции атаки - атакуем
+            else if (distanceToTarget <= attackRange && distanceToTarget >= safeDistance)
             {
                 // Атакуем
+                transform.forward = (target.position - transform.position).normalized;
+                
                 if (CanAttack())
                 {
                     Attack(target);
@@ -93,10 +103,10 @@ protected override void Update()
                 bool canBuff = Time.time >= nextBuffTime && currentEnergy >= 50f && allyToBuff != null;
                 
                 // Если обе способности на перезарядке или нет доступных целей для них,
-                // двигаемся к цели для атаки
+                // двигаемся к цели для оптимальной дистанции атаки
                 if ((!canHeal && !canBuff) || (allyToHeal == null && allyToBuff == null))
                 {
-                    MoveTowards(target, attackRange);
+                    MoveTowards(target, safeDistance);
                 }
             }
         }

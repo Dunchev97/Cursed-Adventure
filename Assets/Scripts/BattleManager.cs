@@ -638,6 +638,8 @@ else
 
     void CreatePlayerCharacters()
     {
+        // Очищаем существующий список персонажей
+        playerCharacters.Clear();
         // Создаем воина
         GameObject warrior = Instantiate(warriorPrefab);
         warrior.name = "Warrior";
@@ -647,6 +649,7 @@ else
         {
             warriorComponent.isEnemy = false;
             playerCharacters.Add(warriorComponent);
+            AddHealthBar(warrior);
         }
         warrior.SetActive(false);
         
@@ -659,6 +662,7 @@ else
         {
             archerComponent.isEnemy = false;
             playerCharacters.Add(archerComponent);
+            AddHealthBar(archer);
         }
         archer.SetActive(false);
         
@@ -671,6 +675,7 @@ else
         {
             supportComponent.isEnemy = false;
             playerCharacters.Add(supportComponent);
+            AddHealthBar(support);
         }
         support.SetActive(false);
         
@@ -683,6 +688,7 @@ else
         {
             assassinComponent.isEnemy = false;
             playerCharacters.Add(assassinComponent);
+            AddHealthBar(assassin);
         }
         assassin.SetActive(false);
     }

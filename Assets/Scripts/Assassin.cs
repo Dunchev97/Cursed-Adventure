@@ -5,14 +5,14 @@ public class Assassin : BaseCharacter
 {
     // Специальные характеристики убийцы
     public float backstabMultiplier = 2.5f; // Множитель урона при атаке сзади
-    public float stealthCooldown = 12f; // Время восстановления невидимости
-    public float stealthDuration = 5f; // Продолжительность невидимости
+    
+    
     public float dashDistance = 5f; // Расстояние рывка
     public float dashCooldown = 4f; // Перезарядка рывка
     
-    private float nextStealthTime = 0f;
+    
     private float nextDashTime = 0f;
-    private bool isStealthed = false;
+    
     
     // Инициализация
     protected override void Start()
@@ -52,14 +52,9 @@ if (target == null || !target.gameObject.activeInHierarchy)
         {
             float distanceToTarget = Vector3.Distance(transform.position, target.position);
             
-            // Если есть возможность использовать стелс и энергия позволяет
-            if (!isStealthed && Time.time >= nextStealthTime && currentEnergy >= 60f && distanceToTarget > attackRange * 2f)
-            {
-                ActivateStealth();
-            }
             
             // Если цель достаточно далеко и можно использовать рывок
-            if (distanceToTarget > attackRange && distanceToTarget < dashDistance + attackRange && Time.time >= nextDashTime && currentEnergy >= 30f)
+            if (distanceToTarget > attackRange && distanceToTarget < dashDistance + attackRange && Time.time >= nextDashTime && currentEnergy >= 100f)
             {
                 Dash();
             }
@@ -108,13 +103,6 @@ if (target == null || !target.gameObject.activeInHierarchy)
             Debug.Log($"{characterName} наносит удар в спину! Урон увеличен в {backstabMultiplier} раза.");
         }
         
-        // Если мы в стелсе, выходим из него и наносим дополнительный урон
-        if (isStealthed)
-        {
-            damage *= 1.5f;
-            DeactivateStealth();
-            Debug.Log($"{characterName} атакует из стелса! Дополнительный урон!");
-        }
         
         // Наносим урон
         EnemyController targetEnemy = attackTarget.GetComponent<EnemyController>();
@@ -147,54 +135,7 @@ if (target == null || !target.gameObject.activeInHierarchy)
         return angle < 60f;
     }
     
-    // Активация стелса
-    private void ActivateStealth()
-    {
-        isStealthed = true;
-        nextStealthTime = Time.time + stealthCooldown;
-        currentEnergy -= 60f;
-        
-        Debug.Log($"{characterName} уходит в стелс!");
-        
-        // Делаем персонажа полупрозрачным
-        Renderer renderer = GetComponent<Renderer>();
-        if (renderer != null)
-        {
-            Color color = renderer.material.color;
-            color.a = 0.3f; // Прозрачность
-            renderer.material.color = color;
-        }
-        
-        // Запускаем таймер для деактивации стелса
-        StartCoroutine(DeactivateStealthAfterDuration());
-    }
     
-    // Деактивация стелса
-    private void DeactivateStealth()
-    {
-        isStealthed = false;
-        
-        // Возвращаем нормальную видимость
-        Renderer renderer = GetComponent<Renderer>();
-        if (renderer != null)
-        {
-            Color color = renderer.material.color;
-            color.a = 1f; // Полная непрозрачность
-            renderer.material.color = color;
-        }
-    }
-    
-    // Корутина для автоматической деактивации стелса
-    private IEnumerator DeactivateStealthAfterDuration()
-    {
-        yield return new WaitForSeconds(stealthDuration);
-        
-        if (isStealthed)
-        {
-            DeactivateStealth();
-            Debug.Log($"{characterName} выходит из стелса.");
-        }
-    }
     
     // Способность рывка к цели
     private void Dash()
@@ -202,7 +143,7 @@ if (target == null || !target.gameObject.activeInHierarchy)
         if (target == null) return;
         
         nextDashTime = Time.time + dashCooldown;
-        currentEnergy -= 30f;
+        currentEnergy -= 100f;
         
         Debug.Log($"{characterName} совершает рывок к цели!");
         

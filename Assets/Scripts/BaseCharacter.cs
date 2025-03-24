@@ -118,8 +118,8 @@ protected virtual void Update()
         }
     }
 
-    // Регенерация энергии во всех состояниях
-    if (currentEnergy < maxEnergy)
+    // Регенерация энергии только в боевом режиме
+    if (currentEnergy < maxEnergy && currentState == CharacterState.Combat)
     {
         currentEnergy += energyRegenRate * Time.deltaTime;
         currentEnergy = Mathf.Min(currentEnergy, maxEnergy);

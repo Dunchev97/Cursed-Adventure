@@ -51,7 +51,7 @@ if (target == null || !target.gameObject.activeInHierarchy)
         {
             float distanceToTarget = Vector3.Distance(transform.position, target.position);
             
-            // Если враг слишком близко, отходим
+            // Если враг слишком близко, отходим и не атакуем
             if (distanceToTarget < safeDistance)
             {
                 Vector3 directionAway = (transform.position - target.position).normalized;
@@ -59,20 +59,27 @@ if (target == null || !target.gameObject.activeInHierarchy)
                 transform.forward = -directionAway; // Продолжаем смотреть на врага
             }
             // Если враг в пределах дальности атаки
-            else if (distanceToTarget <= attackRange)
+            // Если враг в оптимальной дистанции атаки - останавливаемся и атакуем
+            else if (distanceToTarget <= attackRange && distanceToTarget >= safeDistance)
             {
                 // Останавливаемся и атакуем
                 transform.forward = (target.position - transform.position).normalized;
                 
-                if (CanAttack())
-                {
-                    Attack(target);
-                }
+                // Проверка, что лучник не в движении
+                bool isStationary = true;
                 
-                // Проверяем возможность использования мощного выстрела
-                if (Time.time >= nextPowerShotTime && currentEnergy >= 40f)
+                if (isStationary)
                 {
-                    PowerShot();
+                    if (CanAttack())
+                    {
+                        Attack(target);
+                    }
+                    
+                    // Проверяем возможность использования мощного выстрела
+                    if (Time.time >= nextPowerShotTime && currentEnergy >= 100f) // Изменено энергопотребление
+                    {
+                        PowerShot();
+                    }
                 }
             }
             else
@@ -101,7 +108,7 @@ if (target == null || !target.gameObject.activeInHierarchy)
         if (target == null) return;
         
         nextPowerShotTime = Time.time + powerShotCooldown;
-        currentEnergy -= 40f;
+        currentEnergy -= 100f;
         
         Debug.Log($"{characterName} использует мощный выстрел!");
         

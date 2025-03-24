@@ -54,7 +54,7 @@ if (target == null || !target.gameObject.activeInHierarchy)
                 }
                 
                 // Проверяем возможность использования особой атаки
-                if (Time.time >= nextAreaAttackTime && currentEnergy >= 50f)
+                if (Time.time >= nextAreaAttackTime && currentEnergy >= 100f)
                 {
                     AreaAttack();
                 }
@@ -71,7 +71,7 @@ if (target == null || !target.gameObject.activeInHierarchy)
 private void AreaAttack()
 {
     nextAreaAttackTime = Time.time + areaAttackCooldown;
-    currentEnergy -= 50f;
+    currentEnergy -= 100f;
     
     Debug.Log($"{characterName} использует круговую атаку!");
     
