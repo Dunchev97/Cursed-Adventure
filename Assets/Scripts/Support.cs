@@ -82,8 +82,19 @@ protected override void Update()
             }
             else
             {
-                // Двигаемся к цели только если нет союзников, нуждающихся в поддержке
-                if (FindAllyToHeal() == null && FindAllyToBuff() == null)
+                // Если нет приоритетных действий (лечение или усиление), двигаемся к цели
+                BaseCharacter allyToHeal = FindAllyToHeal();
+                BaseCharacter allyToBuff = FindAllyToBuff();
+                
+                // Проверяем, доступно ли лечение и есть ли цель для него
+                bool canHeal = Time.time >= nextHealTime && currentEnergy >= 30f && allyToHeal != null;
+                
+                // Проверяем, доступно ли усиление и есть ли цель для него
+                bool canBuff = Time.time >= nextBuffTime && currentEnergy >= 50f && allyToBuff != null;
+                
+                // Если обе способности на перезарядке или нет доступных целей для них,
+                // двигаемся к цели для атаки
+                if ((!canHeal && !canBuff) || (allyToHeal == null && allyToBuff == null))
                 {
                     MoveTowards(target, attackRange);
                 }

@@ -54,6 +54,13 @@ public class BattleManager : MonoBehaviour
     
     // Количество противников
     public int numberOfEnemies = 3;
+    // Кнопки для выбора сложности
+    public UnityEngine.UI.Button easyDifficultyButton;
+    public UnityEngine.UI.Button mediumDifficultyButton;
+    public UnityEngine.UI.Button hardDifficultyButton;
+
+    // Фаза выбора сложности
+    private bool difficultySelectionPhase = true;
     
     // Временные флаги для размещения персонажей
     private int charactersPlaced = 0;
@@ -186,7 +193,9 @@ else
         // Создаем префабы персонажей, если они не назначены
         CreateDefaultPrefabsIfNeeded();
 
-        SpawnEnemies();
+        // Показываем выбор сложности вместо сразу спавна врагов
+        difficultySelectionPhase = true;
+        SetupDifficultyButtons();
 
         
         
@@ -235,9 +244,6 @@ else
             LogError("Не назначена ссылка на кнопку startBattleButton");
         }
         
-        
-        // Начинаем размещение персонажей
-        StartCoroutine(PlacePlayerCharacters());
 
         LogDebug($"BattleManager инициализирован. Time.timeScale = {Time.timeScale}");
     }
@@ -414,8 +420,8 @@ void SpawnEnemies()
     // Создаем разных типов врагов для разнообразия
     for (int i = 0; i < numberOfEnemies; i++)
     {
-        // Тип противника зависит от индекса (для разнообразия)
-        int enemyType = i % 4; // Чередуем 4 типа врагов
+        // Случайный выбор типа противника
+        int enemyType = Random.Range(0, 4); // Рандомное значение от 0 до 3// Чередуем 4 типа врагов
         GameObject enemyPrefab = null;
         
         switch (enemyType)
@@ -591,8 +597,13 @@ else
 {
     if (placementInstructionText != null)
     {
-        placementInstructionText.text = "Подготовка к бою";
+        placementInstructionText.text = "Разместите ваших персонажей";
         placementInstructionText.gameObject.SetActive(true); // Убедимся, что объект активен
+    }
+    else if (tmpTextComponent != null)
+    {
+        tmpTextComponent.text = "Разместите ваших персонажей";
+        tmpTextComponent.gameObject.SetActive(true);
     }
     
     LogImportant("=== НАЧАЛО РАЗМЕЩЕНИЯ ПЕРСОНАЖЕЙ ===");
@@ -848,6 +859,9 @@ void StartBattle()
     BattleManager.IsFightStarted = true;
     currentState = BattleState.Battle;
     battleStarted = true;
+
+    // Замедляем время боя
+    Time.timeScale = 0.5f;
     // Скрываем кнопку начала боя
 if (startBattleButton != null)
 {
@@ -953,6 +967,8 @@ private IEnumerator HideTextAfterDelay(float delay)
     // Победа
 public void Victory()
 {
+    // Возвращаем нормальную скорость времени
+    Time.timeScale = 1.0f;
     if (currentState == BattleState.Victory) return; // Предотвращаем повторный вызов
     
     currentState = BattleState.Victory;
@@ -982,6 +998,8 @@ else if (placementInstructionText != null)
 // Поражение
 public void Defeat()
 {
+     // Возвращаем нормальную скорость времени
+    Time.timeScale = 1.0f;
     if (currentState == BattleState.Defeat) return; // Предотвращаем повторный вызов
     
     currentState = BattleState.Defeat;
@@ -1253,6 +1271,143 @@ private void FindAllTextComponents()
         LogImportant($"TMP текст: '{text.text}' на объекте: {text.gameObject.name}");
     }
 }
+
+// Метод для настройки кнопок выбора сложности
+private void SetupDifficultyButtons()
+{
+    // Ищем существующий Canvas или создаем новый
+    Canvas canvas = FindObjectOfType<Canvas>();
+    if (canvas == null)
+    {
+        GameObject canvasObj = new GameObject("DifficultyCanvas");
+        canvas = canvasObj.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvasObj.AddComponent<UnityEngine.UI.CanvasScaler>();
+        canvasObj.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+    }
+    
+    // Если кнопка лёгкой сложности не назначена, создаём
+    if (easyDifficultyButton == null)
+    {
+        easyDifficultyButton = CreateDifficultyButton(canvas, "Легкая сложность", new Vector2(0, 70), Color.green);
+    }
+    
+    // Если кнопка средней сложности не назначена, создаём
+    if (mediumDifficultyButton == null)
+    {
+        mediumDifficultyButton = CreateDifficultyButton(canvas, "Средняя сложность", new Vector2(0, 0), Color.yellow);
+    }
+    
+    // Если кнопка сложной сложности не назначена, создаём
+    if (hardDifficultyButton == null)
+    {
+        hardDifficultyButton = CreateDifficultyButton(canvas, "Кошмарная сложность", new Vector2(0, -70), Color.red);
+    }
+    
+    // Добавляем обработчики событий для кнопок
+    easyDifficultyButton.onClick.AddListener(() => SelectDifficulty(4)); // Легкая - 4 врага
+    mediumDifficultyButton.onClick.AddListener(() => SelectDifficulty(5)); // Средняя - 5 врагов
+    hardDifficultyButton.onClick.AddListener(() => SelectDifficulty(6)); // Кошмарная - 6 врагов
+    
+    // Отображаем сообщение с инструкцией
+    if (tmpTextComponent != null)
+    {
+        tmpTextComponent.text = "Выберите сложность";
+        tmpTextComponent.fontSize = 32;
+        tmpTextComponent.color = Color.white;
+        tmpTextComponent.gameObject.SetActive(true);
+    }
+    else if (placementInstructionText != null)
+    {
+        placementInstructionText.text = "Выберите сложность";
+        placementInstructionText.fontSize = 32;
+        placementInstructionText.color = Color.white;
+        placementInstructionText.gameObject.SetActive(true);
+    }
+}
+
+// Создание кнопки для выбора сложности
+private UnityEngine.UI.Button CreateDifficultyButton(Canvas canvas, string text, Vector2 position, Color color)
+{
+    // Создаем игровой объект для кнопки
+    GameObject buttonObj = new GameObject(text);
+    buttonObj.transform.SetParent(canvas.transform, false);
+    
+    // Добавляем Image (фон кнопки)
+    UnityEngine.UI.Image image = buttonObj.AddComponent<UnityEngine.UI.Image>();
+    
+    // Создаем цвет с небольшой прозрачностью
+    color.a = 0.8f;
+    image.color = color;
+    
+    // Добавляем компонент кнопки
+    UnityEngine.UI.Button button = buttonObj.AddComponent<UnityEngine.UI.Button>();
+    button.targetGraphic = image;
+    
+    // Настраиваем позицию и размер
+    RectTransform rectTransform = buttonObj.GetComponent<RectTransform>();
+    rectTransform.anchoredPosition = position;
+    rectTransform.sizeDelta = new Vector2(300, 60);
+    
+    // Добавляем текст на кнопку
+    GameObject textObj = new GameObject("Text");
+    textObj.transform.SetParent(buttonObj.transform, false);
+    
+    // Пробуем найти TextMeshPro, если доступен
+    TMPro.TextMeshProUGUI tmpText = null;
+    try
+    {
+        tmpText = textObj.AddComponent<TMPro.TextMeshProUGUI>();
+        tmpText.text = text;
+        tmpText.fontSize = 24;
+        tmpText.color = Color.black;
+        tmpText.alignment = TMPro.TextAlignmentOptions.Center;
+    }
+    catch (System.Exception)
+    {
+        // Если TextMeshPro недоступен, используем стандартный Text
+        UnityEngine.Object.Destroy(tmpText);
+        UnityEngine.UI.Text uiText = textObj.AddComponent<UnityEngine.UI.Text>();
+        uiText.text = text;
+        uiText.fontSize = 24;
+        uiText.color = Color.black;
+        uiText.alignment = TextAnchor.MiddleCenter;
+        uiText.horizontalOverflow = HorizontalWrapMode.Overflow;
+        uiText.verticalOverflow = VerticalWrapMode.Overflow;
+    }
+    
+    // Настраиваем размер и позицию текста
+    RectTransform textRectTransform = textObj.GetComponent<RectTransform>();
+    textRectTransform.anchorMin = Vector2.zero;
+    textRectTransform.anchorMax = Vector2.one;
+    textRectTransform.sizeDelta = Vector2.zero;
+    
+    return button;
+}
+
+// Метод для выбора сложности
+private void SelectDifficulty(int enemyCount)
+{
+    LogImportant("Выбрана сложность: " + enemyCount + " врагов");
+    
+    // Устанавливаем количество врагов
+    numberOfEnemies = enemyCount;
+    
+    // Скрываем кнопки выбора сложности
+    easyDifficultyButton.gameObject.SetActive(false);
+    mediumDifficultyButton.gameObject.SetActive(false);
+    hardDifficultyButton.gameObject.SetActive(false);
+    
+    // Отключаем фазу выбора сложности
+    difficultySelectionPhase = false;
+    
+    // Спавним врагов с выбранной сложностью
+    SpawnEnemies();
+    
+    // Начинаем размещение персонажей после выбора сложности
+    StartCoroutine(PlacePlayerCharacters());
+}
+
 // Простая анимация масштабирования текста для победы
 private IEnumerator VictoryTextAnimation(TMPro.TextMeshProUGUI text)
 {
