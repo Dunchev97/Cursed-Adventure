@@ -6,10 +6,12 @@ public enum CharacterClass
 {
     Warrior,    // Воин (ближний бой)
     Archer,     // Стрелок (дальний бой)
-    Defender,   // Защитник (танк)
+    Defender,   // Защитник (танк) - оставляем для совместимости
     Assassin,   // Убийца (высокий урон)
     Support,    // Поддержка (лечение)
-    Specialist  // Специалист (особые умения)
+    Specialist, // Специалист (особые умения)
+    Tank,       // Танк (высокое здоровье)
+    Evader      // Уклонист (отскок и яд)
 }
 
 public class BaseCharacter : MonoBehaviour
@@ -148,12 +150,12 @@ protected virtual void Update()
     
     // БОЕВАЯ ЛОГИКА - только выполняется если currentState == CharacterState.Combat
     
-    // Поиск цели, если нужно
-    if (target == null || !target.gameObject.activeInHierarchy)
+    // Каждые 0.5 секунды обновляем цель на ближайшую
+    if (Time.time % 0.5f < Time.deltaTime)
     {
         target = FindNearestTarget();
     }
-    
+
     // Атака и перемещение
     if (target != null)
     {
@@ -181,18 +183,36 @@ protected virtual void Update()
         // Ищем цели из противоположной команды
         string targetTag = isEnemy ? "Player" : "Enemy";
         
-        GameObject[] targets = GameObject.FindGameObjectsWithTag(targetTag);
+        // Находим все возможные цели с нужным тегом
+        GameObject[] possibleTargets = GameObject.FindGameObjectsWithTag(targetTag);
         float closestDistance = Mathf.Infinity;
         Transform nearest = null;
         
-        foreach (GameObject target in targets)
+        // Перебираем все цели и ищем ближайшую, которая еще жива
+        foreach (GameObject target in possibleTargets)
         {
-            float distance = Vector3.Distance(transform.position, target.transform.position);
-            if (distance < closestDistance)
+            // Проверяем, активен ли объект и имеет ли он компонент BaseCharacter
+            BaseCharacter targetChar = target.GetComponent<BaseCharacter>();
+            if (target.activeInHierarchy && targetChar != null && targetChar.currentHealth > 0)
             {
-                closestDistance = distance;
-                nearest = target.transform;
+                float distance = Vector3.Distance(transform.position, target.transform.position);
+                // Обновляем ближайшую цель, если нашли более близкую
+                if (distance < closestDistance)
+                {
+                    closestDistance = distance;
+                    nearest = target.transform;
+                }
             }
+        }
+        
+        // Выводим информацию о выбранной цели
+        if (nearest != null)
+        {
+            Debug.Log($"{characterName} переключился на новую цель: {nearest.name} на расстоянии {closestDistance}м");
+        }
+        else
+        {
+            Debug.Log($"{characterName} не может найти подходящую цель");
         }
         
         return nearest;

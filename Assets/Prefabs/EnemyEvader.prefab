@@ -12,10 +12,10 @@ GameObject:
   - component: {fileID: 5628326528298700574}
   - component: {fileID: 3253638117454575611}
   - component: {fileID: 733755887109387123}
-  - component: {fileID: 4011893855758510827}
   - component: {fileID: -4176492382970675801}
+  - component: {fileID: 1199034251883974376}
   m_Layer: 0
-  m_Name: Warrior
+  m_Name: EnemyEvader
   m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -67,7 +67,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: f85675e1234a5744ba5058599cab9a22, type: 2}
+  - {fileID: 2100000, guid: 6e7f8439c5da44843aec63ebfe477f7a, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -112,37 +112,6 @@ CapsuleCollider:
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &4011893855758510827
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2924824341416683330}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: caa759f0aaae197408c7eeaf0c64f316, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  isBattleReady: 0
-  isEnemy: 0
-  characterName: Character
-  characterClass: 0
-  maxHealth: 100
-  currentHealth: 0
-  attackDamage: 10
-  attackSpeed: 1
-  moveSpeed: 3
-  attackRange: 2
-  critChance: 0.05
-  critMultiplier: 2
-  maxEnergy: 100
-  currentEnergy: 0
-  energyRegenRate: 20
-  healthBarPrefab: {fileID: 0}
-  currentState: 0
-  areaAttackRange: 3
-  areaAttackCooldown: 5
 --- !u!54 &-4176492382970675801
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -170,3 +139,38 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!114 &1199034251883974376
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2924824341416683330}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a1e61c35554f1d4ba0d5326dbcb47e4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  isBattleReady: 0
+  isEnemy: 1
+  characterName: Character
+  characterClass: 7
+  maxHealth: 100
+  currentHealth: 0
+  attackDamage: 10
+  attackSpeed: 0.5
+  moveSpeed: 1.5
+  attackRange: 2
+  critChance: 0.05
+  critMultiplier: 2
+  maxEnergy: 100
+  currentEnergy: 0
+  energyRegenRate: 20
+  healthBarPrefab: {fileID: 0}
+  currentState: 0
+  bounceDistance: 5
+  poisonRadius: 3
+  poisonDuration: 3
+  poisonDamage: 5
+  poisonCooldown: 6
+  triggerDistance: 2

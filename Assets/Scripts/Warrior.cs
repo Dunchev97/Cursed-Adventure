@@ -15,30 +15,34 @@ public class Warrior : BaseCharacter
         characterClass = CharacterClass.Warrior;
         characterName = "Воин";
         
-        // Характеристики воина
-        maxHealth = 150f;
+        // Характеристики воина по таблице баланса
+        maxHealth = 120f;
         currentHealth = maxHealth;
-        attackDamage = 15f;
+        attackDamage = 16f;
         attackSpeed = 1.2f;
         attackRange = 2f;
-        moveSpeed = 3f;
+        moveSpeed = 3.5f;
+        
+        // Обновляем шанс крита согласно таблице
+        critChance = 0.1f;
+        critMultiplier = 2f;
     }
     
     // Обновление каждый кадр
-protected override void Update()
-{
-    // Вызываем базовый метод Update для обработки общей логики и состояния
-    base.Update();
-    
-    // Выходим, если персонаж не в боевом режиме
-    if (currentState != CharacterState.Combat) return;
-    if (isDead) return;
+    protected override void Update()
+    {
+        // Вызываем базовый метод Update для обработки общей логики и состояния
+        base.Update();
+        
+        // Выходим, если персонаж не в боевом режиме
+        if (currentState != CharacterState.Combat) return;
+        if (isDead) return;
         
         // Находим ближайшего врага
-if (target == null || !target.gameObject.activeInHierarchy)
-{
-    target = FindNearestTarget();
-}
+        if (target == null || !target.gameObject.activeInHierarchy)
+        {
+            target = FindNearestTarget();
+        }
         
         if (target != null)
         {
@@ -68,82 +72,82 @@ if (target == null || !target.gameObject.activeInHierarchy)
     }
     
     // Особая атака по области
-private void AreaAttack()
-{
-    nextAreaAttackTime = Time.time + areaAttackCooldown;
-    currentEnergy -= 100f;
-    
-    Debug.Log($"{characterName} использует круговую атаку!");
-    
-    // Находим всех врагов в радиусе
-    Collider[] hitColliders = Physics.OverlapSphere(transform.position, areaAttackRange);
-    foreach (Collider collider in hitColliders)
+    private void AreaAttack()
     {
-        // Сначала проверяем, есть ли компонент BaseCharacter
-        BaseCharacter enemyCharacter = collider.GetComponent<BaseCharacter>();
-        if (enemyCharacter != null && enemyCharacter.isEnemy && enemyCharacter != this)
+        nextAreaAttackTime = Time.time + areaAttackCooldown;
+        currentEnergy -= 100f;
+        
+        Debug.Log($"{characterName} использует круговую атаку!");
+        
+        // Находим всех врагов в радиусе
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, areaAttackRange);
+        foreach (Collider collider in hitColliders)
         {
-            enemyCharacter.TakeDamage(attackDamage * 0.7f);
-            continue; // Переходим к следующему коллайдеру
+            // Сначала проверяем, есть ли компонент BaseCharacter
+            BaseCharacter enemyCharacter = collider.GetComponent<BaseCharacter>();
+            if (enemyCharacter != null && enemyCharacter.isEnemy && enemyCharacter != this)
+            {
+                enemyCharacter.TakeDamage(attackDamage * 0.7f);
+                continue; // Переходим к следующему коллайдеру
+            }
+            
+            // Для совместимости проверяем и EnemyController
+            EnemyController enemy = collider.GetComponent<EnemyController>();
+            if (enemy != null)
+            {
+                enemy.TakeDamage(attackDamage * 0.7f);
+            }
         }
         
-        // Для совместимости проверяем и EnemyController
-        EnemyController enemy = collider.GetComponent<EnemyController>();
-        if (enemy != null)
-        {
-            enemy.TakeDamage(attackDamage * 0.7f);
-        }
+        // Визуальный эффект атаки по области
+        StartCoroutine(AreaAttackAnimation());
     }
     
-    // Визуальный эффект атаки по области
-    StartCoroutine(AreaAttackAnimation());
-}
-    
-// Анимация круговой атаки
-private IEnumerator AreaAttackAnimation()
-{
-    // Создаем временный объект для визуализации атаки
-    GameObject areaEffect = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-    areaEffect.transform.position = new Vector3(transform.position.x, 0.1f, transform.position.z);
-    areaEffect.transform.localScale = new Vector3(areaAttackRange * 2, 0.1f, areaAttackRange * 2);
-    
-    // Убираем коллайдер, нам нужен только визуальный эффект
-    Destroy(areaEffect.GetComponent<Collider>());
-    
-    // Создаем и применяем материал
-    Material material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-    material.color = new Color(1, 0.5f, 0, 0.5f); // Полупрозрачный оранжевый
-    areaEffect.GetComponent<Renderer>().material = material;
-    
-    // Анимируем расширение эффекта
-    float duration = 0.5f;
-    float elapsed = 0;
-    
-    Vector3 startScale = new Vector3(0.1f, 0.1f, 0.1f);
-    Vector3 endScale = new Vector3(areaAttackRange * 2, 0.1f, areaAttackRange * 2);
-    
-    areaEffect.transform.localScale = startScale;
-    
-    while (elapsed < duration)
+    // Анимация круговой атаки
+    private IEnumerator AreaAttackAnimation()
     {
-        elapsed += Time.deltaTime;
-        float t = elapsed / duration;
+        // Создаем временный объект для визуализации атаки
+        GameObject areaEffect = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        areaEffect.transform.position = new Vector3(transform.position.x, 0.1f, transform.position.z);
+        areaEffect.transform.localScale = new Vector3(areaAttackRange * 2, 0.1f, areaAttackRange * 2);
         
-        // Плавно увеличиваем размер эффекта
-        areaEffect.transform.localScale = Vector3.Lerp(startScale, endScale, t);
+        // Убираем коллайдер, нам нужен только визуальный эффект
+        Destroy(areaEffect.GetComponent<Collider>());
         
-        // Постепенно уменьшаем непрозрачность
-        material.color = new Color(1, 0.5f, 0, 0.5f * (1 - t) + 0.2f);
+        // Создаем и применяем материал
+        Material material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        material.color = new Color(1, 0.5f, 0, 0.5f); // Полупрозрачный оранжевый
+        areaEffect.GetComponent<Renderer>().material = material;
         
-        yield return null;
+        // Анимируем расширение эффекта
+        float duration = 0.5f;
+        float elapsed = 0;
+        
+        Vector3 startScale = new Vector3(0.1f, 0.1f, 0.1f);
+        Vector3 endScale = new Vector3(areaAttackRange * 2, 0.1f, areaAttackRange * 2);
+        
+        areaEffect.transform.localScale = startScale;
+        
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            
+            // Плавно увеличиваем размер эффекта
+            areaEffect.transform.localScale = Vector3.Lerp(startScale, endScale, t);
+            
+            // Постепенно уменьшаем непрозрачность
+            material.color = new Color(1, 0.5f, 0, 0.5f * (1 - t) + 0.2f);
+            
+            yield return null;
+        }
+        
+        // Ждем немного для наглядности
+        yield return new WaitForSeconds(0.2f);
+        
+        // Удаляем эффект
+        Destroy(areaEffect);
     }
-    
-    // Ждем немного для наглядности
-    yield return new WaitForSeconds(0.2f);
-    
-    // Удаляем эффект
-    Destroy(areaEffect);
-}
 
     // Анимация атаки по области
     protected override IEnumerator AttackAnimation()

@@ -9,6 +9,11 @@ public class Archer : BaseCharacter
     public float powerShotCooldown = 8f;
     private float nextPowerShotTime = 0f;
     
+    // Переменные для отслеживания движения
+    private Vector3 lastPosition;
+    private bool isMoving = false;
+    private float stationaryThreshold = 0.05f; // Порог для определения, что персонаж стоит на месте
+    
     // Инициализация
     protected override void Start()
     {
@@ -16,36 +21,47 @@ public class Archer : BaseCharacter
         characterClass = CharacterClass.Archer;
         characterName = "Стрелок";
         
-        // Характеристики стрелка
+        // Характеристики стрелка по таблице баланса
         maxHealth = 90f;
         currentHealth = maxHealth;
         attackDamage = 12f;
         attackSpeed = 0.8f;
-        attackRange = 8f; // Большая дальность атаки
-        moveSpeed = 3.5f; // Немного быстрее воина
+        attackRange = 8f;
+        moveSpeed = 3.5f;
+        
+        // Обновляем шанс крита согласно таблице
+        critChance = 0.1f;
+        critMultiplier = 2f;
         
         // Создаем простой префаб стрелы, если не назначен
         if (arrowPrefab == null)
         {
             arrowPrefab = CreateArrowPrefab();
         }
+        
+        // Инициализируем lastPosition
+        lastPosition = transform.position;
     }
     
     // Обновление каждый кадр
-protected override void Update()
-{
-    // Вызываем базовый метод Update для обработки общей логики и состояния
-    base.Update();
-    
-    // Выходим, если персонаж не в боевом режиме
-    if (currentState != CharacterState.Combat) return;
-    if (isDead) return;
+    protected override void Update()
+    {
+        // Определяем, движется ли персонаж
+        isMoving = Vector3.Distance(transform.position, lastPosition) > stationaryThreshold;
+        lastPosition = transform.position;
+        
+        // Вызываем базовый метод Update для обработки общей логики и состояния
+        base.Update();
+        
+        // Выходим, если персонаж не в боевом режиме
+        if (currentState != CharacterState.Combat) return;
+        if (isDead) return;
         
         // Находим ближайшего врага
-if (target == null || !target.gameObject.activeInHierarchy)
-{
-    target = FindNearestTarget();
-}
+        if (target == null || !target.gameObject.activeInHierarchy)
+        {
+            target = FindNearestTarget();
+        }
         
         if (target != null)
         {
@@ -58,17 +74,14 @@ if (target == null || !target.gameObject.activeInHierarchy)
                 transform.position += directionAway * moveSpeed * Time.deltaTime;
                 transform.forward = -directionAway; // Продолжаем смотреть на врага
             }
-            // Если враг в пределах дальности атаки
-            // Если враг в оптимальной дистанции атаки - останавливаемся и атакуем
+            // Если враг в пределах дальности атаки и на оптимальной дистанции
             else if (distanceToTarget <= attackRange && distanceToTarget >= safeDistance)
             {
                 // Останавливаемся и атакуем
                 transform.forward = (target.position - transform.position).normalized;
                 
                 // Проверка, что лучник не в движении
-                bool isStationary = true;
-                
-                if (isStationary)
+                if (!isMoving)
                 {
                     if (CanAttack())
                     {
@@ -76,7 +89,7 @@ if (target == null || !target.gameObject.activeInHierarchy)
                     }
                     
                     // Проверяем возможность использования мощного выстрела
-                    if (Time.time >= nextPowerShotTime && currentEnergy >= 100f) // Изменено энергопотребление
+                    if (Time.time >= nextPowerShotTime && currentEnergy >= 100f)
                     {
                         PowerShot();
                     }
@@ -112,8 +125,8 @@ if (target == null || !target.gameObject.activeInHierarchy)
         
         Debug.Log($"{characterName} использует мощный выстрел!");
         
-        // Запускаем мощную стрелу
-        StartCoroutine(ShootArrow(target, attackDamage * 2.5f, true));
+        // Запускаем мощную стрелу с множителем урона 3 (согласно таблице)
+        StartCoroutine(ShootArrow(target, attackDamage * 3f, true));
     }
     
     // Корутина для запуска стрелы
@@ -209,8 +222,8 @@ if (target == null || !target.gameObject.activeInHierarchy)
         
         // Создаем наконечник
         GameObject arrowTip = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-// Деформируем сферу, чтобы она напоминала наконечник стрелы
-arrowTip.transform.localScale = new Vector3(0.1f, 0.2f, 0.1f);
+        // Деформируем сферу, чтобы она напоминала наконечник стрелы
+        arrowTip.transform.localScale = new Vector3(0.1f, 0.2f, 0.1f);
         arrowTip.transform.SetParent(arrow.transform);
         arrowTip.transform.localScale = new Vector3(0.1f, 0.2f, 0.1f);
         arrowTip.transform.localPosition = new Vector3(0, 0, 0.5f);

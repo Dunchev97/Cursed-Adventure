@@ -20,12 +20,15 @@ public class BattleManager : MonoBehaviour
     public GameObject archerPrefab;
     public GameObject supportPrefab;
     public GameObject assassinPrefab;
+    public GameObject tankPrefab;
+    public GameObject evaderPrefab;
+    public GameObject specialistPrefab;
 
     public UnityEngine.UI.Button startBattleButton; // В начале класса
 
     public GameObject placementIndicatorPrefab;
     private GameObject currentPlacementIndicator;
-
+    
     private bool battleStarted = false;
 
     // Добавьте после префабов персонажей игрока
@@ -33,6 +36,9 @@ public class BattleManager : MonoBehaviour
     public GameObject enemyArcherPrefab;
     public GameObject enemySupportPrefab;
     public GameObject enemyAssassinPrefab;
+    public GameObject enemyTankPrefab;
+    public GameObject enemyEvaderPrefab;
+    public GameObject enemySpecialistPrefab;
 
     public GameObject placementInstructionTextObject;
     private UnityEngine.UI.Text placementInstructionText;
@@ -61,12 +67,21 @@ public class BattleManager : MonoBehaviour
 
     // Фаза выбора сложности
     private bool difficultySelectionPhase = true;
+    // Этап выбора персонажей
+    private bool characterSelectionPhase = true;
+
+    // Панель выбора персонажей
+    public GameObject characterSelectionPanel;
+
+    // Список выбранных персонажей
+    private List<string> selectedCharacters = new List<string>();
     
     // Временные флаги для размещения персонажей
     private int charactersPlaced = 0;
     private bool isPlacingCharacters = false;
     private GameObject currentCharacterToPlace;
-
+    
+    // Префаб полоски здоровья
     public GameObject healthBarPrefab;
     
     // Ссылка на экземпляр для синглтона
@@ -76,13 +91,13 @@ public class BattleManager : MonoBehaviour
     void Awake()
     {
         // Реализация синглтона
-        if (Instance == null)
-        {
-            Instance = this;
-        }
-        else if (Instance != this)
+        if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
+        }
+        else
+        {
+            Instance = this;
         }
     }
 
@@ -98,153 +113,68 @@ public class BattleManager : MonoBehaviour
     // Метод Start вызывается перед первым кадром
     void Start()
     {
-        // Диагностика текстовых компонентов
-        FindAllTextComponents();
+        // Находим TextMeshPro компонент, если он есть
+        tmpTextComponent = GetComponentInChildren<TMPro.TextMeshProUGUI>();
+        
+        // Находим компонент Text для инструкций размещения
         if (placementInstructionTextObject != null)
         {
-            TMPro.TextMeshProUGUI tmpText = placementInstructionTextObject.GetComponent<TMPro.TextMeshProUGUI>();
-            if (tmpText != null)
-            {
-                LogImportant("Найден TMP компонент на объекте: " + placementInstructionTextObject.name);
-                // Сохраняем ссылку на компонент TMP, хотя в коде ожидается UI.Text
-                tmpTextComponent = tmpText;
-            }
-            else
-            {
-                LogError("Объект PlacementInstructionText не содержит компонент TextMeshPro!");
-            }
+            placementInstructionText = placementInstructionTextObject.GetComponent<UnityEngine.UI.Text>();
         }
-
-    if (placementInstructionText != null)
-{
-    LogImportant("Текст инструкции найден и доступен: " + placementInstructionText.name);
-    placementInstructionText.text = "Текст инициализирован в Start";
-}
-else
-{
-    LogError("Текст инструкции НЕ найден! Пытаемся найти в сцене...");
-    // Пытаемся найти Text объект по имени
-    GameObject textObj = GameObject.Find("PlacementInstructionText");
-    if (textObj != null)
-    {
-        placementInstructionText = textObj.GetComponent<UnityEngine.UI.Text>();
-        if (placementInstructionText != null)
+        
+        // Устанавливаем начальное состояние
+        currentState = BattleState.Setup;
+        
+        // Создаем префабы персонажей, если они не назначены
+        CreateDefaultPrefabsIfNeeded();
+        
+        // Сначала показываем выбор персонажей
+        characterSelectionPhase = true;
+        difficultySelectionPhase = false;
+        
+        // Показываем панель выбора персонажей
+        if (characterSelectionPanel != null)
         {
-            LogImportant("Текст инструкции найден по имени");
-            placementInstructionText.text = "Текст найден по имени";
-        }
-    }
-}
-
-        // Создаем невидимую стену, чтобы враги точно не могли атаковать во время расстановки
-
-    // Проверка настроек арены
-    LogDebug($"Арена: тег={playerSpawnArea.tag}, активна={playerSpawnArea.gameObject.activeInHierarchy}");
-    LogDebug($"Коллайдер арены: включен={playerSpawnArea.GetComponent<Collider>()?.enabled}");
-        // Поиск текстового элемента, если он не назначен
-    if (placementInstructionText == null)
-    {
-        GameObject textObj = GameObject.Find("PlacementInstructionText");
-        if (textObj != null)
-        {
-            placementInstructionText = textObj.GetComponent<UnityEngine.UI.Text>();
+            characterSelectionPanel.SetActive(true);
         }
         else
         {
-            // Создаем текстовый элемент программно
-            Canvas canvas = FindObjectOfType<Canvas>();
-            if (canvas == null)
-            {
-                // Создаем canvas, если не существует
-                GameObject canvasObj = new GameObject("InstructionCanvas");
-                canvas = canvasObj.AddComponent<Canvas>();
-                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                canvasObj.AddComponent<UnityEngine.UI.CanvasScaler>();
-                canvasObj.AddComponent<UnityEngine.UI.GraphicRaycaster>();
-            }
-            
-            GameObject textGameObject = new GameObject("PlacementInstructionText");
-            textGameObject.transform.SetParent(canvas.transform, false);
-            UnityEngine.UI.Text text = textGameObject.AddComponent<UnityEngine.UI.Text>();
-            placementInstructionText = text;
-            // Настраиваем текст и его расположение в UI
-        RectTransform rectTransform = text.GetComponent<RectTransform>();
-        
-        // Настройка текста
-        text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        text.fontSize = 24;
-        text.alignment = TextAnchor.MiddleCenter;
-        text.color = Color.white;
-        
-        // Настройка позиционирования
-        rectTransform.anchorMin = new Vector2(0.5f, 1);
-        rectTransform.anchorMax = new Vector2(0.5f, 1);
-        rectTransform.pivot = new Vector2(0.5f, 1);
-        rectTransform.anchoredPosition = new Vector2(0, -50);
-        rectTransform.sizeDelta = new Vector2(600, 50);
+            LogError("Панель выбора персонажей не назначена!");
+            // Если панель не назначена, переходим сразу к выбору сложности
+            difficultySelectionPhase = true;
+            SetupDifficultyButtons();
         }
-    }
-
-        // Устанавливаем начальное состояние
-        currentState = BattleState.Setup;
-        // Замедляем игровое время для лучшего отслеживания
-        Time.timeScale = 1.0f;
-
-        // Создаем префабы персонажей, если они не назначены
-        CreateDefaultPrefabsIfNeeded();
-
-        // Показываем выбор сложности вместо сразу спавна врагов
-        difficultySelectionPhase = true;
-        SetupDifficultyButtons();
-
         
+        // Настройка тегов для правильной работы логики
+        gameObject.tag = "BattleManager";
         
-        // Настройка тегов и визуализации зон
-        if (playerSpawnArea != null && playerSpawnArea.gameObject.tag != "PlayerSpawnArea")
+        // Визуализация зон спавна для отладки
+        if (playerSpawnArea != null)
         {
-            playerSpawnArea.gameObject.tag = "PlayerSpawnArea";
-            LogDebug("Установлен тег PlayerSpawnArea для области размещения игрока");
+            GameObject playerAreaMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            playerAreaMarker.name = "PlayerSpawnAreaMarker";
+            playerAreaMarker.transform.position = playerSpawnArea.position;
+            playerAreaMarker.transform.localScale = new Vector3(1, 0.1f, 1);
+            playerAreaMarker.GetComponent<Renderer>().material.color = new Color(0, 1, 0, 0.3f);
+            Destroy(playerAreaMarker.GetComponent<Collider>());
         }
-            
-        if (playerSpawnArea != null && playerSpawnArea.gameObject.tag != "PlayerSpawnArea")
+        
+        if (enemySpawnArea != null)
         {
-            playerSpawnArea.gameObject.tag = "PlayerSpawnArea";
-            LogDebug("Установлен тег PlayerSpawnArea для области размещения игрока");
+            GameObject enemyAreaMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            enemyAreaMarker.name = "EnemySpawnAreaMarker";
+            enemyAreaMarker.transform.position = enemySpawnArea.position;
+            enemyAreaMarker.transform.localScale = new Vector3(1, 0.1f, 1);
+            enemyAreaMarker.GetComponent<Renderer>().material.color = new Color(1, 0, 0, 0.3f);
+            Destroy(enemyAreaMarker.GetComponent<Collider>());
         }
-        
-        LogDebug($"Тег PlayerSpawnArea: {playerSpawnArea.gameObject.tag}");
-        LogDebug($"Тег EnemySpawnArea: {enemySpawnArea.gameObject.tag}");
-        
-        MeshRenderer playerAreaRenderer = playerSpawnArea.GetComponent<MeshRenderer>();
-        if (playerAreaRenderer != null)
-        {
-            Material material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            material.color = new Color(0, 0, 1, 0.3f); // Полупрозрачный синий
-            playerAreaRenderer.material = material;
-        }
-
-        MeshRenderer enemyAreaRenderer = enemySpawnArea.GetComponent<MeshRenderer>();
-        if (enemyAreaRenderer != null)
-        {
-            Material material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            material.color = new Color(1, 0, 0, 0.3f); // Полупрозрачный красный
-            enemyAreaRenderer.material = material;
-        }
-        
-        
-        battleStarted = false;
         
         // Отключаем кнопку начала боя в начале
         if (startBattleButton != null)
         {
             startBattleButton.gameObject.SetActive(false);
         }
-        else
-        {
-            LogError("Не назначена ссылка на кнопку startBattleButton");
-        }
         
-
         LogDebug($"BattleManager инициализирован. Time.timeScale = {Time.timeScale}");
     }
 
@@ -255,10 +185,10 @@ else
 
     public void OnStartBattleButtonClick()
     {
-        LogDebug("Кнопка 'Начать бой' нажата! Символов размещено: " + charactersPlaced);
+        LogDebug("Кнопка 'Начать бой' нажата! Персонажей размещено: " + charactersPlaced);
         
-        // Изменить эту строку с "if (charactersPlaced >= 3)" на:
-        if (charactersPlaced >= 4)
+        // Проверяем, все ли персонажи размещены
+        if (charactersPlaced >= playerCharacters.Count)
         {
             LogDebug("Запускаем бой");
             // Запускаем бой
@@ -272,7 +202,7 @@ else
         }
         else
         {
-            LogWarning("Не все персонажи размещены! Размещено: " + charactersPlaced);
+            LogWarning("Не все персонажи размещены! Размещено: " + charactersPlaced + " из " + playerCharacters.Count);
         }
     }
     
@@ -339,7 +269,7 @@ else
                 
                 // Увеличиваем счетчик размещенных персонажей
                 charactersPlaced++;
-                LogDebug($"Размещено персонажей: {charactersPlaced} из 4");
+                LogDebug($"Размещено персонажей: {charactersPlaced} из {playerCharacters.Count}");
                 
                 // Удаляем индикатор размещения
                 if (currentPlacementIndicator != null)
@@ -349,7 +279,7 @@ else
                 }
                 
                 // Проверяем, все ли персонажи размещены
-                if (charactersPlaced >= 4)
+                if (charactersPlaced >= playerCharacters.Count)
                 {
                     isPlacingCharacters = false;
                     if (startBattleButton != null)
@@ -421,7 +351,7 @@ void SpawnEnemies()
     for (int i = 0; i < numberOfEnemies; i++)
     {
         // Случайный выбор типа противника
-        int enemyType = Random.Range(0, 4); // Рандомное значение от 0 до 3// Чередуем 4 типа врагов
+        int enemyType = Random.Range(0, 7); // Теперь чередуем 7 типов врагов// Чередуем 4 типа врагов
         GameObject enemyPrefab = null;
         
         switch (enemyType)
@@ -437,6 +367,15 @@ void SpawnEnemies()
                 break;
             case 3:
                 enemyPrefab = enemyAssassinPrefab;
+                break;
+            case 4:
+                enemyPrefab = enemyTankPrefab;
+                break;
+            case 5:
+                enemyPrefab = enemyEvaderPrefab;
+                break;
+            case 6:
+                enemyPrefab = enemySpecialistPrefab;
                 break;
         }
         
@@ -499,30 +438,30 @@ else
 
     void AddHealthBar(GameObject character)
     {
-        if (healthBarPrefab != null)
+        if (healthBarPrefab == null)
         {
-            // Создаем полоску здоровья
-            GameObject healthBar = Instantiate(healthBarPrefab, character.transform);
-            
-            // Настраиваем позицию и поворот
-            healthBar.transform.localPosition = new Vector3(0, 2.0f, 0);
-            
-            // Убеждаемся, что Canvas смотрит в правильном направлении
-            Canvas canvas = healthBar.GetComponent<Canvas>();
-            if (canvas != null)
+            LogWarning("Префаб полоски здоровья не назначен!");
+            return;
+        }
+        
+        // Создаем полоску здоровья и прикрепляем к персонажу
+        GameObject healthBar = Instantiate(healthBarPrefab, character.transform);
+        healthBar.transform.localPosition = new Vector3(0, 2f, 0); // Размещаем над головой
+        
+        // Настраиваем полоску здоровья
+        // Предполагаем, что у нас есть компонент для отображения здоровья
+        // Если компонент называется по-другому, замените "HealthBar" на правильное имя
+        MonoBehaviour healthBarComponent = healthBar.GetComponent<MonoBehaviour>();
+        if (healthBarComponent != null)
+        {
+            BaseCharacter baseCharacter = character.GetComponent<BaseCharacter>();
+            if (baseCharacter != null)
             {
-                // Устанавливаем режим рендеринга
-                canvas.renderMode = RenderMode.WorldSpace;
-                
-                // Устанавливаем размер
-                RectTransform rectTransform = canvas.GetComponent<RectTransform>();
-                if (rectTransform != null)
-                {
-                    rectTransform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
-                }
+                // Вместо вызова SetupHealthBar, который может отсутствовать,
+                // устанавливаем родителя для полоски здоровья
+                healthBar.transform.SetParent(character.transform);
+                LogDebug($"Добавлена полоска здоровья к персонажу {character.name}");
             }
-            
-            LogDebug($"Добавлена полоска здоровья к персонажу {character.name}");
         }
     }
 
@@ -543,165 +482,68 @@ else
         marker.GetComponent<Renderer>().material = material;
     }
 
-    // Добавьте этот метод в BattleManager
+    // Размещение персонажей игрока
+    IEnumerator PlacePlayerCharacters()
+    {
+        LogDebug("Размещение персонажей игрока...");
+        
+        // Создаем персонажей игрока
+        CreatePlayerCharacters();
+        
+        // Устанавливаем флаг размещения персонажей
+        isPlacingCharacters = true;
+        charactersPlaced = 0;
+        
+        // Показываем первого персонажа для размещения
+        ShowNextCharacterToPlace();
+        
+        // Ждем, пока все персонажи будут размещены
+        // yield return new WaitUntil(() => !isPlacingCharacters);
+        
+        // Вместо этого используем другой подход
+        while (isPlacingCharacters && charactersPlaced < playerCharacters.Count)
+        {
+            yield return null; // Ждем один кадр и проверяем снова
+        }
+        
+        LogDebug("Все персонажи размещены!");
+    }
+    
+    // Автоматическое размещение персонажей игрока (для тестирования)
     void AutoPlacePlayerCharacters()
     {
         LogDebug("Автоматическое размещение персонажей игрока...");
         
         // Создаем персонажей игрока
-        // Эти префабы должны быть уже назначены в инспекторе
-        GameObject[] playerPrefabs = {
-            warriorPrefab,
-            archerPrefab,
-            supportPrefab,
-            assassinPrefab
-        };
+        CreatePlayerCharacters();
         
-        // Рассчитываем позиции размещения в зоне игрока
-        for (int i = 0; i < playerPrefabs.Length; i++)
-        {
-            if (playerPrefabs[i] != null)
-            {
-                // Рассчитываем позицию с небольшим разбросом
-                Vector3 position = playerSpawnArea.position + new Vector3(
-                    Random.Range(-2f, 2f),
-                    0.5f, // Приподнимаем над поверхностью
-                    Random.Range(-2f, 2f)
-                );
-                
-                // Создаем персонажа
-                GameObject playerObject = Instantiate(playerPrefabs[i], position, Quaternion.identity);
-                playerObject.name = playerPrefabs[i].name + " " + (i + 1);
-                
-                // Устанавливаем тег
-                playerObject.tag = "Player";
-                
-                // Получаем компонент BaseCharacter
-                BaseCharacter playerCharacter = playerObject.GetComponent<BaseCharacter>();
-                if (playerCharacter != null)
-                {
-                    playerCharacter.isEnemy = false; // Устанавливаем флаг союзника
-                    playerCharacters.Add(playerCharacter);
-                    
-                    // Добавляем визуальный идентификатор
-                    AddTeamMarker(playerObject, false);
-                }
-                
-                LogDebug($"Размещен персонаж игрока: {playerObject.name}");
-            }
-        }
-    }
-
-    // Размещение персонажей игрока
-    IEnumerator PlacePlayerCharacters()
-{
-    if (placementInstructionText != null)
-    {
-        placementInstructionText.text = "Разместите ваших персонажей";
-        placementInstructionText.gameObject.SetActive(true); // Убедимся, что объект активен
-    }
-    else if (tmpTextComponent != null)
-    {
-        tmpTextComponent.text = "Разместите ваших персонажей";
-        tmpTextComponent.gameObject.SetActive(true);
-    }
-    
-    LogImportant("=== НАЧАЛО РАЗМЕЩЕНИЯ ПЕРСОНАЖЕЙ ===");
-    LogDebug($"Количество персонажей в списке: {playerCharacters.Count}");
-    
-    isPlacingCharacters = true;
-    charactersPlaced = 0;
-    
-    // Показываем инструкции для игрока
-    ShowPlacementInstructions(true);
-    
-    // Создаем персонажей
-    CreatePlayerCharacters();
-    LogDebug($"Персонажи созданы. Количество: {playerCharacters.Count}");
-    
-    // Показываем первого персонажа для размещения
-    ShowNextCharacterToPlace();
-    
-    // ИСПРАВИТЬ: Эта строка может вызывать зависание
-    // yield return new WaitUntil(() => !isPlacingCharacters);
-    
-    // Вместо этого используем другой подход
-    while (isPlacingCharacters && charactersPlaced < 4)
-    {
-        yield return null; // Ждем один кадр и проверяем снова
-    }
-    
-    // Скрываем инструкции
-    ShowPlacementInstructions(false);
-    LogImportant("=== ЗАВЕРШЕНИЕ РАЗМЕЩЕНИЯ ПЕРСОНАЖЕЙ ===");
-}
-
-    void CreatePlayerCharacters()
-    {
-        // Очищаем существующий список персонажей
-        playerCharacters.Clear();
-        // Создаем воина
-        GameObject warrior = Instantiate(warriorPrefab);
-        warrior.name = "Warrior";
-        warrior.tag = "Player";
-        BaseCharacter warriorComponent = warrior.GetComponent<BaseCharacter>();
-        if (warriorComponent != null)
-        {
-            warriorComponent.isEnemy = false;
-            playerCharacters.Add(warriorComponent);
-            AddHealthBar(warrior);
-        }
-        warrior.SetActive(false);
+        // Размещаем персонажей автоматически
+        Vector3 basePosition = playerSpawnArea.position;
+        float spacing = 1.5f;
         
-        // Создаем стрелка
-        GameObject archer = Instantiate(archerPrefab);
-        archer.name = "Archer";
-        archer.tag = "Player";
-        BaseCharacter archerComponent = archer.GetComponent<BaseCharacter>();
-        if (archerComponent != null)
+        for (int i = 0; i < playerCharacters.Count; i++)
         {
-            archerComponent.isEnemy = false;
-            playerCharacters.Add(archerComponent);
-            AddHealthBar(archer);
+            GameObject characterObject = playerCharacters[i].gameObject;
+            characterObject.SetActive(true);
+            
+            // Размещаем персонажей в линию с небольшим смещением
+            Vector3 position = basePosition + new Vector3(i * spacing - (playerCharacters.Count - 1) * spacing / 2, 0.5f, 0);
+            characterObject.transform.position = position;
+            
+            // Увеличиваем счетчик размещенных персонажей
+            charactersPlaced++;
         }
-        archer.SetActive(false);
         
-        // Создаем персонажа поддержки
-        GameObject support = Instantiate(supportPrefab);
-        support.name = "Support";
-        support.tag = "Player";
-        BaseCharacter supportComponent = support.GetComponent<BaseCharacter>();
-        if (supportComponent != null)
-        {
-            supportComponent.isEnemy = false;
-            playerCharacters.Add(supportComponent);
-            AddHealthBar(support);
-        }
-        support.SetActive(false);
+        // Все персонажи размещены
+        isPlacingCharacters = false;
         
-        // Создаем убийцу
-        GameObject assassin = Instantiate(assassinPrefab);
-        assassin.name = "Assassin";
-        assassin.tag = "Player";
-        BaseCharacter assassinComponent = assassin.GetComponent<BaseCharacter>();
-        if (assassinComponent != null)
+        // Активируем кнопку начала боя
+        if (startBattleButton != null)
         {
-            assassinComponent.isEnemy = false;
-            playerCharacters.Add(assassinComponent);
-            AddHealthBar(assassin);
+            startBattleButton.gameObject.SetActive(true);
         }
-        assassin.SetActive(false);
-    }
-
-    // Добавь этот новый метод
-    void ShowPlacementInstructions(bool show)
-    {
-        // Здесь можно добавить код для отображения UI-инструкций
-        // Например, текст "Кликните, чтобы разместить воина" и т.д.
-        if (show)
-        {
-            LogDebug("Инструкции: Кликните левой кнопкой мыши на арене, чтобы разместить персонажа");
-        }
+        
+        LogDebug("Все персонажи автоматически размещены!");
     }
     
     // Показать следующего персонажа для размещения
@@ -741,118 +583,49 @@ else
                 currentPlacementIndicator = marker;
             }
 
-            // Обновляем текст подсказки
-            string instructionText = "";
-            
-            if (characterObject.name.Contains("Warrior") || characterObject.GetComponent<Warrior>() != null)
-            {
-                instructionText = "Разместите воина на поле боя. Воины сильны в ближнем бою.";
-            }
-            else if (characterObject.name.Contains("Archer") || characterObject.GetComponent<Archer>() != null)
-            {
-                instructionText = "Разместите лучника на поле боя. Лучники атакуют с дистанции.";
-            }
-            else if (characterObject.name.Contains("Support") || characterObject.GetComponent<Support>() != null)
-            {
-                instructionText = "Разместите персонажа поддержки. Они могут лечить союзников.";
-            }
-            else if (characterObject.name.Contains("Assassin") || characterObject.GetComponent<Assassin>() != null)
-            {
-                instructionText = "Разместите убийцу на поле боя. Убийцы наносят большой урон одиночным целям.";
-            }
+            // Обновляем текст подсказки в зависимости от типа персонажа
+            string instructionText = $"Разместите {characterObject.name} на поле боя.";
             
             // Отладочное сообщение с текстом инструкции
             LogImportant("ТЕКСТ ИНСТРУКЦИИ: " + instructionText);
 
-
-            // Прямой поиск "New Text"
-            GameObject newTextObj = GameObject.Find("New Text");
-            if (newTextObj != null)
-            {
-                UnityEngine.UI.Text regularText = newTextObj.GetComponent<UnityEngine.UI.Text>();
-                if (regularText != null)
-                {
-                    regularText.text = instructionText;
-                    LogImportant("Обновлен New Text: " + instructionText);
-                }
-                
-                TMPro.TextMeshProUGUI tmpText = newTextObj.GetComponent<TMPro.TextMeshProUGUI>();
-                if (tmpText != null)
-                {
-                    tmpText.text = instructionText;
-                    LogImportant("Обновлен TMP New Text: " + instructionText);
-                }
-            }
-
-            // Обновляем текст в UI
+            // Обновляем текст в UI используя доступные компоненты
             if (tmpTextComponent != null)
             {
                 tmpTextComponent.text = instructionText;
-                tmpTextComponent.gameObject.SetActive(true); // Убедимся, что объект активен
-                LogImportant("Обновлен TMP текст: " + instructionText);
+                tmpTextComponent.gameObject.SetActive(true);
             }
-            else
+            else if (placementInstructionText != null)
             {
-                // Прямой поиск по имени
-                GameObject textObj = GameObject.Find("PlacementInstructionText");
-                if (textObj != null)
-                {
-                    TMPro.TextMeshProUGUI tmpText = textObj.GetComponent<TMPro.TextMeshProUGUI>();
-                    if (tmpText != null)
-                    {
-                        tmpText.text = instructionText;
-                        tmpText.gameObject.SetActive(true);
-                        tmpTextComponent = tmpText; // Сохраняем для будущего использования
-                        LogImportant("Найден и обновлен текст через Find: " + textObj.name);
-                    }
-                    else
-                    {
-                        // Если не назначен, ищем в сцене
-                        placementInstructionText = textObj.GetComponent<UnityEngine.UI.Text>();
-                        if (placementInstructionText != null)
-                        {
-                            placementInstructionText.text = instructionText;
-                            placementInstructionText.gameObject.SetActive(true);
-                        }
-                        else
-                        {
-                            LogWarning("Текстовый элемент для инструкций не найден. Создаю временный...");
-                            
-                            // Создаем временный текст над персонажем
-                            GameObject textIndicator = new GameObject("PlacementTextIndicator");
-                            textIndicator.transform.SetParent(currentCharacterToPlace.transform);
-                            textIndicator.transform.localPosition = new Vector3(0, 2.5f, 0);
-                            
-                            TextMesh textMesh = textIndicator.AddComponent<TextMesh>();
-                            textMesh.text = instructionText;
-                            textMesh.fontSize = 12;
-                            textMesh.alignment = TextAlignment.Center;
-                            textMesh.anchor = TextAnchor.MiddleCenter;
-                            textMesh.color = Color.white;
-                        }
-                    }
-                }
-                else
-                {
-                    LogWarning("Текстовый элемент PlacementInstructionText не найден.");
-                }
-            }         
-
-
+                placementInstructionText.text = instructionText;
+                placementInstructionText.gameObject.SetActive(true);
+            }
         }
+        
         // Проверяем, все ли персонажи размещены после размещения текущего
-        if (charactersPlaced >= 4) // Используем 3, так как в этот момент charactersPlaced еще не увеличен
+        if (charactersPlaced >= playerCharacters.Count)
         {
-            LogDebug("Все персонажи почти размещены. Подготовка к активации кнопки.");
+            LogDebug("Все персонажи размещены. Подготовка к активации кнопки начала боя.");
+            
             // Активируем кнопку начала боя после размещения всех персонажей
             if (startBattleButton != null)
             {
-                // Это выполнится, когда последний (4-й) персонаж будет размещен
                 startBattleButton.gameObject.SetActive(true);
                 LogDebug("Кнопка 'Начать бой' активирована.");
             }
         }
         
+    }
+    
+    // Показ инструкций по размещению персонажей
+    void ShowPlacementInstructions(bool show)
+    {
+        // Здесь можно добавить код для отображения UI-инструкций
+        // Например, текст "Кликните, чтобы разместить воина" и т.д.
+        if (show)
+        {
+            LogDebug("Инструкции: Кликните левой кнопкой мыши на арене, чтобы разместить персонажа");
+        }
     }
     
     // Начало боя
@@ -1055,6 +828,24 @@ else if (placementInstructionText != null)
             assassinPrefab = CreateDefaultCharacterPrefab("Assassin", Color.magenta);
         }
         
+        // Создаем префаб танка
+        if (tankPrefab == null)
+        {
+            tankPrefab = CreateDefaultCharacterPrefab("Tank", Color.cyan);
+        }
+        
+        // Создаем префаб уклониста
+        if (evaderPrefab == null)
+        {
+            evaderPrefab = CreateDefaultCharacterPrefab("Evader", Color.grey);
+        }
+        
+        // Создаем префаб специалиста
+        if (specialistPrefab == null)
+        {
+            specialistPrefab = CreateDefaultCharacterPrefab("Specialist", Color.white);
+        }
+        
         // Создаем префаб врага
         if (enemyPrefab == null)
         {
@@ -1063,8 +854,8 @@ else if (placementInstructionText != null)
             // Добавляем компонент EnemyController
             enemyPrefab.AddComponent<EnemyController>();
             
-            // Не отключай префаб - нам нужно просто создать его как шаблон
-            // enemyPrefab.SetActive(false); // Удали или закомментируй эту строку
+            // Отключаем префаб, чтобы он не был виден в сцене
+            enemyPrefab.SetActive(false);
         }
     }
     
@@ -1100,6 +891,15 @@ else if (placementInstructionText != null)
                 break;
             case "Assassin":
                 prefab.AddComponent<Assassin>();
+                break;
+            case "Tank":
+                prefab.AddComponent<Tank>();
+                break;
+            case "Evader":
+                prefab.AddComponent<Evader>();
+                break;
+            case "Specialist":
+                prefab.AddComponent<Specialist>();
                 break;
         }
         
@@ -1432,4 +1232,125 @@ private IEnumerator VictoryTextAnimation(TMPro.TextMeshProUGUI text)
     // Возвращаем исходный размер
     text.fontSize = originalFontSize;
 }
+
+    // Метод для установки выбранных персонажей
+    public void SetSelectedCharacters(List<string> characters)
+    {
+        selectedCharacters = characters;
+        LogImportant($"Выбрано {selectedCharacters.Count} персонажей");
+        
+        foreach (string character in selectedCharacters)
+        {
+            LogDebug($"Выбран персонаж: {character}");
+        }
+    }
+
+    // Метод для начала выбора сложности
+    public void StartDifficultySelection()
+    {
+        LogImportant("Переход к выбору сложности");
+        
+        // Скрываем панель выбора персонажей
+        if (characterSelectionPanel != null)
+        {
+            characterSelectionPanel.SetActive(false);
+        }
+        
+        // Показываем панель выбора сложности
+        difficultySelectionPhase = true;
+        SetupDifficultyButtons();
+    }
+
+    // Создание персонажей игрока
+    void CreatePlayerCharacters()
+    {
+        // Очищаем существующий список персонажей
+        playerCharacters.Clear();
+        
+        // Если нет выбранных персонажей, используем набор по умолчанию
+        if (selectedCharacters.Count == 0)
+        {
+            LogWarning("Нет выбранных персонажей, используем стандартный набор");
+            
+            // Создаем воина
+            CreateCharacterByType("Воин");
+            
+            // Создаем стрелка
+            CreateCharacterByType("Лучник");
+            
+            // Создаем персонажа поддержки
+            CreateCharacterByType("Поддержка");
+            
+            // Создаем убийцу
+            CreateCharacterByType("Убийца");
+        }
+        else
+        {
+            // Создаем выбранных персонажей
+            foreach (string characterType in selectedCharacters)
+            {
+                CreateCharacterByType(characterType);
+            }
+        }
+        
+        LogDebug($"Создано {playerCharacters.Count} персонажей для игрока");
+    }
+
+    // Вспомогательный метод для создания персонажей по типу
+    private void CreateCharacterByType(string characterType)
+    {
+        GameObject characterPrefab = null;
+        
+        // Определяем префаб в зависимости от типа персонажа
+        switch (characterType)
+        {
+            case "Воин":
+                characterPrefab = warriorPrefab;
+                break;
+            case "Лучник":
+                characterPrefab = archerPrefab;
+                break;
+            case "Поддержка":
+                characterPrefab = supportPrefab;
+                break;
+            case "Убийца":
+                characterPrefab = assassinPrefab;
+                break;
+            case "Танк":
+                characterPrefab = tankPrefab;
+                break;
+            case "Уклонист":
+                characterPrefab = evaderPrefab;
+                break;
+            case "Специалист":
+                characterPrefab = specialistPrefab;
+                break;
+        }
+        
+        if (characterPrefab != null)
+        {
+            // Создаем персонажа
+            GameObject character = Instantiate(characterPrefab);
+            character.name = characterType;
+            character.tag = "Player";
+            
+            // Получаем и настраиваем BaseCharacter компонент
+            BaseCharacter characterComponent = character.GetComponent<BaseCharacter>();
+            if (characterComponent != null)
+            {
+                characterComponent.isEnemy = false;
+                playerCharacters.Add(characterComponent);
+                AddHealthBar(character);
+            }
+            
+            // Деактивируем персонажа до фазы размещения
+            character.SetActive(false);
+            
+            LogDebug($"Создан персонаж {characterType}");
+        }
+        else
+        {
+            LogError($"Не найден префаб для типа персонажа: {characterType}");
+        }
+    }
 }

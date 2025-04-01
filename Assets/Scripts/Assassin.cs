@@ -4,15 +4,14 @@ using System.Collections;
 public class Assassin : BaseCharacter
 {
     // Специальные характеристики убийцы
-    public float backstabMultiplier = 2.5f; // Множитель урона при атаке сзади
+    public float backstabMultiplier = 1.5f; // Множитель урона при атаке сзади (согласно таблице)
     
-    
-    public float dashDistance = 5f; // Расстояние рывка
+    // Расстояние рывка
+    public float dashDistance = 5f; 
     public float dashCooldown = 4f; // Перезарядка рывка
     
-    
+    // Время следующего рывка
     private float nextDashTime = 0f;
-    
     
     // Инициализация
     protected override void Start()
@@ -21,37 +20,38 @@ public class Assassin : BaseCharacter
         characterClass = CharacterClass.Assassin;
         characterName = "Убийца";
         
-        // Характеристики убийцы
+        // Характеристики убийцы по таблице баланса
         maxHealth = 85f;
         currentHealth = maxHealth;
-        attackDamage = 20f; // Высокий урон
-        attackSpeed = 1.3f; // Быстрые атаки
-        attackRange = 1.5f; // Короткая дистанция атаки
-        moveSpeed = 4f; // Быстрое передвижение
-        critChance = 0.2f; // Высокий шанс крита
-        critMultiplier = 2.5f; // Сильный крит
+        attackDamage = 18f;
+        attackSpeed = 1.0f;
+        attackRange = 2f;
+        moveSpeed = 3.6f;
+        
+        // Обновляем шанс крита согласно таблице
+        critChance = 0.2f;
+        critMultiplier = 2f;
     }
     
     // Обновление каждый кадр
-protected override void Update()
-{
-    // Вызываем базовый метод Update для обработки общей логики и состояния
-    base.Update();
-    
-    // Выходим, если персонаж не в боевом режиме
-    if (currentState != CharacterState.Combat) return;
-    if (isDead) return;
+    protected override void Update()
+    {
+        // Вызываем базовый метод Update для обработки общей логики и состояния
+        base.Update();
+        
+        // Выходим, если персонаж не в боевом режиме
+        if (currentState != CharacterState.Combat) return;
+        if (isDead) return;
         
         // Находим ближайшего врага
-if (target == null || !target.gameObject.activeInHierarchy)
-{
-    target = FindNearestTarget();
-}
+        if (target == null || !target.gameObject.activeInHierarchy)
+        {
+            target = FindNearestTarget();
+        }
         
         if (target != null)
         {
             float distanceToTarget = Vector3.Distance(transform.position, target.position);
-            
             
             // Если цель достаточно далеко и можно использовать рывок
             if (distanceToTarget > attackRange && distanceToTarget < dashDistance + attackRange && Time.time >= nextDashTime && currentEnergy >= 100f)
@@ -103,7 +103,6 @@ if (target == null || !target.gameObject.activeInHierarchy)
             Debug.Log($"{characterName} наносит удар в спину! Урон увеличен в {backstabMultiplier} раза.");
         }
         
-        
         // Наносим урон
         EnemyController targetEnemy = attackTarget.GetComponent<EnemyController>();
         if (targetEnemy != null)
@@ -134,8 +133,6 @@ if (target == null || !target.gameObject.activeInHierarchy)
         // Если угол меньше 60 градусов, считаем что атака происходит сзади
         return angle < 60f;
     }
-    
-    
     
     // Способность рывка к цели
     private void Dash()

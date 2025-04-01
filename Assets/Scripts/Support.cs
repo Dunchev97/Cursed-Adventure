@@ -4,7 +4,7 @@ using System.Collections;
 public class Support : BaseCharacter
 {
     // Специальные характеристики поддержки
-    public float healAmount = 20f;
+    public float healAmount = 40f; // Количество лечения согласно таблице
     public float healCooldown = 5f;
     public float healRange = 6f;
     private float nextHealTime = 0f;
@@ -15,6 +15,11 @@ public class Support : BaseCharacter
     private float nextBuffTime = 0f;
     public float safeDistance = 4f; // Безопасная дистанция от врагов
     
+    // Переменные для отслеживания движения
+    private Vector3 lastPosition;
+    private bool isMoving = false;
+    private float stationaryThreshold = 0.05f; // Порог для определения, что персонаж стоит на месте
+    
     // Инициализация
     protected override void Start()
     {
@@ -22,25 +27,37 @@ public class Support : BaseCharacter
         characterClass = CharacterClass.Support;
         characterName = "Поддержка";
         
-        // Характеристики поддержки
+        // Характеристики поддержки по таблице баланса
         maxHealth = 80f;
         currentHealth = maxHealth;
-        attackDamage = 5f; // Слабая атака
+        attackDamage = 12f;
         attackSpeed = 0.7f;
         attackRange = 5f;
         moveSpeed = 3.2f;
+        
+        // Обновляем шанс крита согласно таблице
+        critChance = 0.1f;
+        critMultiplier = 2f;
+        
+        // Инициализируем lastPosition
+        lastPosition = transform.position;
     }
     
     // Обновление каждый кадр
-protected override void Update()
-{
-    // Вызываем базовый метод Update для обработки общей логики и состояния
-    base.Update();
-    
-    // Выходим, если персонаж не в боевом режиме
-    if (currentState != CharacterState.Combat) return;
-    if (isDead) return;
+    protected override void Update()
+    {
+        // Определяем, движется ли персонаж
+        isMoving = Vector3.Distance(transform.position, lastPosition) > stationaryThreshold;
+        lastPosition = transform.position;
         
+        // Вызываем базовый метод Update для обработки общей логики и состояния
+        base.Update();
+        
+        // Выходим, если персонаж не в боевом режиме
+        if (currentState != CharacterState.Combat) return;
+        if (isDead) return;
+        
+        // Лечение и бафф можно применять в движении
         // Пытаемся найти союзников, нуждающихся в лечении
         if (Time.time >= nextHealTime && currentEnergy >= 30f)
         {
@@ -79,13 +96,14 @@ protected override void Update()
                 transform.position += directionAway * moveSpeed * Time.deltaTime;
                 transform.forward = -directionAway; // Продолжаем смотреть на врага
             }
-            // Если цель в оптимальной дистанции атаки - атакуем
+            // Если цель в оптимальной дистанции атаки - атакуем только стоя на месте
             else if (distanceToTarget <= attackRange && distanceToTarget >= safeDistance)
             {
-                // Атакуем
+                // Поворачиваемся к цели
                 transform.forward = (target.position - transform.position).normalized;
                 
-                if (CanAttack())
+                // Атакуем только если стоим на месте
+                if (!isMoving && CanAttack())
                 {
                     Attack(target);
                 }
