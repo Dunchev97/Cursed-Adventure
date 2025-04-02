@@ -1170,17 +1170,27 @@ MonoBehaviour:
   archerPrefab: {fileID: 7981388465158699525, guid: ac417ac6985a6e04aa8e11dfa3390620, type: 3}
   supportPrefab: {fileID: 198869563422439578, guid: 5c537801f608f964ab3ab8ca1e44eca1, type: 3}
   assassinPrefab: {fileID: 4581875485644083600, guid: 72e0c4fe7da55b840aa467701bd72db9, type: 3}
+  tankPrefab: {fileID: 2924824341416683330, guid: a5d94fdee8690614f9be9a74464dfe71, type: 3}
+  evaderPrefab: {fileID: 2924824341416683330, guid: ef6dc5734216f634b8b0d907ddb71a7a, type: 3}
+  specialistPrefab: {fileID: 2924824341416683330, guid: 04e8c78a4c528a84e9abec014f006835, type: 3}
   startBattleButton: {fileID: 1422791075}
   placementIndicatorPrefab: {fileID: 0}
   enemyWarriorPrefab: {fileID: 2924824341416683330, guid: 0847415dd58f7ec47a56a0fba761a447, type: 3}
   enemyArcherPrefab: {fileID: 7981388465158699525, guid: 5474e00c8cd86b64497df88b960436dd, type: 3}
   enemySupportPrefab: {fileID: 198869563422439578, guid: 8ee146b5be2126940925ecb29ecbb938, type: 3}
   enemyAssassinPrefab: {fileID: 4581875485644083600, guid: 31f1dfd6a3a9b58409c3458f18e35152, type: 3}
+  enemyTankPrefab: {fileID: 2924824341416683330, guid: 6421d38518d7bf041bc98c587c925ec0, type: 3}
+  enemyEvaderPrefab: {fileID: 2924824341416683330, guid: 29ebacb658c4dde49b7d36c5b0aa47b1, type: 3}
+  enemySpecialistPrefab: {fileID: 2924824341416683330, guid: 5f81a624e2e658c4e8856f78f33f7b55, type: 3}
   placementInstructionTextObject: {fileID: 1869434214}
   enemyPrefab: {fileID: 0}
   playerSpawnArea: {fileID: 1416779667}
   enemySpawnArea: {fileID: 274591645}
   numberOfEnemies: 5
+  easyDifficultyButton: {fileID: 0}
+  mediumDifficultyButton: {fileID: 0}
+  hardDifficultyButton: {fileID: 0}
+  characterSelectionPanel: {fileID: 0}
   healthBarPrefab: {fileID: 7689169378935855048, guid: 71c9ca779ded6db4c8c777668ce62869, type: 3}
 --- !u!4 &1767787071
 Transform:
